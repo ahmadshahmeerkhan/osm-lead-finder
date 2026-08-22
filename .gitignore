@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+leads.csv
+.env
+.vscode/
+.idea/

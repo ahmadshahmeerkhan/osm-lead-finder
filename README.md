@@ -1,71 +1,81 @@
-# 📍 Lead Finder: Ethical Business Data & Contact Pipeline
+# 📍 Lead Finder
 
-An asynchronous Python pipeline built to discover local business entities using **OpenStreetMap (Overpass & Nominatim APIs)** and extract public contact information while strictly complying with web crawling ethics and domain-level policies.
+A small async Python pipeline that finds local businesses using OpenStreetMap and checks their websites for a public contact email. I built this while trying to find leads for an automation side-project idea I was testing.
 
----
+## 💡 Why I built this
 
-## 📌 Overview
+I wanted to try building small automation tools for local businesses, things like AI voice agents that could handle bookings for salons and spas. But before I could pitch anyone, I needed to actually find businesses to contact, and doing that manually (searching, copying info, writing outreach one at a time) took forever, maybe an hour just to get through a handful of leads.
 
-Traditional web scraping scripts often rely on anti-bot workarounds or third-party scraping services. This project takes an ethical, open-source approach:
-1. It queries **OpenStreetMap's public spatial databases** to find registered businesses, addresses, phone numbers, and web domains.
-2. It parses target websites exclusively for publicly listed email addresses while respecting each site's `robots.txt` rules and enforcing strict request throttling.
+The first version of this used Google Maps and included some browser-fingerprint spoofing to avoid getting blocked. After reading more about it, I realized that approach was sitting in a gray area against most platforms' terms of service, so I rebuilt the whole thing around OpenStreetMap instead. It's public data, built to be queried like this, so none of the spoofing tricks are even needed anymore. I also added a check so the script respects each site's robots.txt before touching it.
 
----
+## ⚙️ How it works
 
-## 🛠️ Tech Stack & Architecture
+```
+1. Geocode city name  -->  2. Query Overpass API  -->  3. Check site for   -->  4. Save results
+   (Nominatim)                for matching             email (robots.txt        to CSV
+                              businesses                aware)
+```
 
-| Component | Library / API | Purpose |
-| :--- | :--- | :--- |
-| **Language** | Python 3.10+ | Core runtime environment |
-| **Geocoding** | Nominatim API | Converts city strings to spatial bounding boxes |
-| **Data Query** | Overpass API | Retrieves structured business nodes and metadata |
-| **HTTP Engine** | `httpx` | Asynchronous HTTP requests with connection pooling |
-| **HTML Parsing** | `BeautifulSoup4` + `lxml` | DOM traversing and email regex extraction |
-| **Robots Compliance** | `urllib.robotparser` | Verifies target domain fetch permissions dynamically |
+1. Turns a city name like "Multan, Pakistan" into coordinates using Nominatim
+2. Searches OpenStreetMap's Overpass API for businesses matching a category (like "beauty salon") in that area
+3. For each business with a website, checks robots.txt first, then looks for a public email through mailto links, page text, or a contact page
+4. Saves everything to a CSV, skipping anything already saved from a previous run
 
----
+## 🛠️ Stack
 
-## 📊 Output Data Schema
+Python 3.10+, using asyncio and httpx for running requests without blocking on each one, BeautifulSoup + lxml for reading page HTML, urllib.robotparser for checking robots.txt, and dataclasses to keep things structured.
 
-Data is saved incrementally to `leads.csv`. Below is the exact structure of the generated CSV file:
+## 🚀 Running it
 
-| Field Name | Type | Description | Example |
-| :--- | :--- | :--- | :--- |
-| `niche` | String | Target business category | `beauty salon` |
-| `city` | String | Target location query | `Multan, Pakistan` |
-| `business_name` | String | Verified name of the business | `Glow & Grace Salon` |
-| `phone` | String | Listed primary contact phone number | `+92 300 1234567` |
-| `website` | String | Official business web domain | `https://example.com` |
-| `email` | String | Scraped public contact email address | `info@example.com` |
-| `address` | String | Physical address registered on OSM | `Main Boulevard, Gulberg` |
-| `osm_url` | String | Direct link to OpenStreetMap node | `https://www.openstreetmap.org/node/12345` |
+```bash
+git clone https://github.com/ahmadshahmeerkhan/osm-lead-finder.git
+cd osm-lead-finder
+pip install -r requirements.txt
+```
 
----
-
-## ⚙️ Configuration & Customization
-
-You can target **any business category or geographic location** worldwide by editing the configuration variables inside `lead_scraper.py`.
-
-### 1. Mapping OpenStreetMap Tags
-OpenStreetMap categorizes entities using key-value tags (e.g., `shop`, `amenity`, `office`, `leisure`). You can add any category to `NICHE_TAGS`:
+Open lead_scraper.py and edit the niches/cities near the top:
 
 ```python
-# Configure OSM tag filters
-NICHE_TAGS = {
-    # Services & Beauty
-    "beauty salon": '["shop"="beauty"]',
-    "spa": '["leisure"="spa"]',
-    "hair salon": '["shop"="hairdresser"]',
-    
-    # Food & Hospitality
-    "restaurant": '["amenity"="restaurant"]',
-    "cafe": '["amenity"="cafe"]',
-    
-    # Tech & Offices
-    "software agency": '["office"="it"]',
-    "real estate": '["office"="estate_agent"]',
-}
-
-# Select active targets for the run
 NICHES = ["beauty salon", "spa"]
 CITIES = ["Multan, Pakistan", "Lahore, Pakistan"]
+```
+
+Then run:
+
+```bash
+python lead_scraper.py
+```
+
+It saves results to leads.csv in the same folder and prints progress as it goes.
+
+## 📊 Sample output
+
+```csv
+niche,city,business_name,phone,website,email,address,osm_url
+beauty salon,Multan Pakistan,Glow & Grace Salon,+92 300 1234567,https://glowgrace.example,info@glowgrace.example,Main Boulevard Gulberg,https://www.openstreetmap.org/node/1234567
+spa,Multan Pakistan,Serenity Spa,+92 300 7654321,https://serenityspa.example,,Cantt Bazaar,https://www.openstreetmap.org/node/7654321
+```
+
+An empty email column just means no public email was found, or the site's robots.txt didn't allow checking it. The script doesn't try to get around that.
+
+## 🔒 A note on the approach
+
+This project only uses OpenStreetMap for finding businesses, which is open data made for exactly this kind of use. When checking a business's own site for an email, it identifies itself honestly in the request headers, checks robots.txt first, and adds a delay between requests instead of hammering a small business's server all at once. There's no fingerprint spoofing or ToS bypass involved because with this approach there's nothing to bypass.
+
+## 🧠 What I got out of this
+
+Mostly, actually understanding asyncio properly, running several requests at once without blocking on each one, and using a semaphore so I'm not overloading anything. The bigger lesson honestly was going back and rebuilding the first version after realizing it wasn't the right approach. That taught me more than if it had just worked the first time.
+
+## 🔭 Possible next steps
+
+- Add some basic tests for the email extraction logic
+- Take niches/cities as command line arguments instead of editing the file directly
+- Maybe a small Streamlit front end to browse leads instead of a raw CSV
+
+## 📄 License
+
+MIT, see the LICENSE file.
+
+## 📬 Contact
+
+Built by Ahmad Shahmeer Khan. Feel free to open an issue if you have questions.

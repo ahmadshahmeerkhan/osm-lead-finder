@@ -33,7 +33,7 @@ CONCURRENCY = 3
 REQUEST_TIMEOUT = 15
 MIN_DELAY_BETWEEN_REQUESTS = 1.5
 
-USER_AGENT = "LeadFinder/1.0 (contact: youremail@example.com)"
+USER_AGENT = "LeadFinder/1.0 (+https://github.com/ahmadshahmeerkhan)"
 
 # --- Data Model ---
 

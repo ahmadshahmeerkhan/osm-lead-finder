@@ -22,10 +22,12 @@ NICHE_TAGS = {
     "spa": '["leisure"="spa"]',
     "hair salon": '["shop"="hairdresser"]',
     "car wrap / detailing": '["shop"="car_repair"]',
+    "cafe": '["amenity"="cafe"]',
+    "restaurant": '["amenity"="restaurant"]',
 }
 
-NICHES = ["beauty salon", "spa"]
-CITIES = ["Multan, Pakistan", "Lahore, Pakistan"]
+NICHES = ["cafe", "restaurant"]
+CITIES = ["London, United Kingdom", "New York, USA"]
 
 OUTPUT_FILE = "leads.csv"
 MAX_RESULTS_PER_QUERY = 25
